@@ -13,7 +13,6 @@ if (!fs.existsSync(databaseDirectory)) {
 
 const databaseFilePath = path.join(databaseDirectory, "sqlite.db");
 
-// Singleton connection to prevent multi-worker lock issues during build
 declare global {
   // eslint-disable-next-line no-var
   var __dbInstance: Database.Database | undefined;
@@ -23,7 +22,6 @@ function getDatabase(): Database.Database {
   if (!global.__dbInstance) {
     const db = new Database(databaseFilePath, { timeout: 10000 });
 
-    // Busy timeout prevents SQLITE_BUSY errors during parallel Next.js workers
     db.pragma("busy_timeout = 10000");
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");
@@ -33,55 +31,67 @@ function getDatabase(): Database.Database {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS groups (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS group_members (
-        group_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        PRIMARY KEY (group_id, user_id),
-        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        groupId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        PRIMARY KEY (groupId, userId)
       );
 
       CREATE TABLE IF NOT EXISTS expenses (
         id TEXT PRIMARY KEY,
-        group_id TEXT NOT NULL,
-        payer_id TEXT NOT NULL,
+        groupId TEXT NOT NULL,
+        paidById TEXT NOT NULL,
         amount REAL NOT NULL,
         description TEXT NOT NULL,
         date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-        FOREIGN KEY (payer_id) REFERENCES users(id) ON DELETE CASCADE
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS expense_splits (
         id TEXT PRIMARY KEY,
-        expense_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        amount REAL NOT NULL,
-        FOREIGN KEY (expense_id) REFERENCES expenses(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        expenseId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        amount REAL NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS settlements (
         id TEXT PRIMARY KEY,
-        group_id TEXT NOT NULL,
-        from_user_id TEXT NOT NULL,
-        to_user_id TEXT NOT NULL,
+        groupId TEXT NOT NULL,
+        fromUserId TEXT NOT NULL,
+        toUserId TEXT NOT NULL,
         amount REAL NOT NULL,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-        FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
+        date DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // ایمن‌سازی کامل برای سازگاری با دیتابیس ایجاد شده قبلی
+    const alterStatements = [
+      "ALTER TABLE users ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP;",
+      "ALTER TABLE groups ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP;",
+      "ALTER TABLE expenses ADD COLUMN paidById TEXT;",
+      "ALTER TABLE expenses ADD COLUMN groupId TEXT;",
+      "ALTER TABLE expenses ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP;",
+      "ALTER TABLE expense_splits ADD COLUMN expenseId TEXT;",
+      "ALTER TABLE expense_splits ADD COLUMN userId TEXT;",
+      "ALTER TABLE settlements ADD COLUMN groupId TEXT;",
+      "ALTER TABLE settlements ADD COLUMN fromUserId TEXT;",
+      "ALTER TABLE settlements ADD COLUMN toUserId TEXT;",
+    ];
+
+    for (const stmt of alterStatements) {
+      try {
+        db.exec(stmt);
+      } catch {}
+    }
 
     global.__dbInstance = db;
   }
