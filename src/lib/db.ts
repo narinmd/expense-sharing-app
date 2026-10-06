@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { randomUUID } from "crypto";
 
 const databaseDirectory =
   process.env.NODE_ENV === "production"
@@ -45,16 +46,16 @@ function getDatabase(): Database.Database {
         PRIMARY KEY (groupId, userId)
       );
 
-CREATE TABLE IF NOT EXISTS expenses (
-  id TEXT PRIMARY KEY,
-  groupId TEXT NOT NULL,
-  paidById TEXT NOT NULL,
-  expenseForId TEXT NOT NULL,
-  amount REAL NOT NULL,
-  description TEXT NOT NULL,
-  date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+      CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY,
+        groupId TEXT NOT NULL,
+        paidById TEXT NOT NULL,
+        expenseForId TEXT NOT NULL,
+        amount REAL NOT NULL,
+        description TEXT NOT NULL,
+        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
 
       CREATE TABLE IF NOT EXISTS expense_splits (
         id TEXT PRIMARY KEY,
@@ -93,8 +94,50 @@ CREATE TABLE IF NOT EXISTS expenses (
       } catch {}
     }
 
+    const userCount = db
+      .prepare("SELECT COUNT(*) as count FROM users")
+      .get() as { count: number };
+
+    if (userCount.count === 0) {
+      const users = [
+        {
+          id: randomUUID(),
+          name: "Alice",
+          email: "alice@example.com",
+        },
+        {
+          id: randomUUID(),
+          name: "Bob",
+          email: "bob@example.com",
+        },
+        {
+          id: randomUUID(),
+          name: "Charlie",
+          email: "charlie@example.com",
+        },
+        {
+          id: randomUUID(),
+          name: "David",
+          email: "david@example.com",
+        },
+      ];
+
+      const insertUser = db.prepare(
+        "INSERT INTO users (id, name, email) VALUES (?, ?, ?)",
+      );
+
+      const insertUsers = db.transaction(() => {
+        for (const user of users) {
+          insertUser.run(user.id, user.name, user.email);
+        }
+      });
+
+      insertUsers();
+    }
+
     global.__dbInstance = db;
   }
+
   return global.__dbInstance;
 }
 
