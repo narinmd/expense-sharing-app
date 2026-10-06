@@ -2,7 +2,6 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
-// import { randomUUID } from "crypto";
 
 const databaseDirectory =
   process.env.NODE_ENV === "production"
@@ -16,6 +15,7 @@ if (!fs.existsSync(databaseDirectory)) {
 const databaseFilePath = path.join(databaseDirectory, "sqlite.db");
 
 declare global {
+  // eslint-disable-next-line no-var
   var __dbInstance: Database.Database | undefined;
 }
 
@@ -100,40 +100,46 @@ function getDatabase(): Database.Database {
       .get() as { count: number };
 
     if (userCount.count === 0) {
+      const u1 = randomUUID();
+      const u2 = randomUUID();
+      const u3 = randomUUID();
+      const u4 = randomUUID();
+
       const users = [
-        {
-          id: randomUUID(),
-          name: "Alice",
-          email: "alice@example.com",
-        },
-        {
-          id: randomUUID(),
-          name: "Bob",
-          email: "bob@example.com",
-        },
-        {
-          id: randomUUID(),
-          name: "Charlie",
-          email: "charlie@example.com",
-        },
-        {
-          id: randomUUID(),
-          name: "David",
-          email: "david@example.com",
-        },
+        { id: u1, name: "Alice", email: "alice@example.com" },
+        { id: u2, name: "Bob", email: "bob@example.com" },
+        { id: u3, name: "Charlie", email: "charlie@example.com" },
+        { id: u4, name: "David", email: "david@example.com" },
       ];
+
+      const groupId = randomUUID();
+      const expenseId = randomUUID();
 
       const insertUser = db.prepare(
         "INSERT INTO users (id, name, email) VALUES (?, ?, ?)",
       );
+      const insertGroup = db.prepare(
+        "INSERT INTO groups (id, name) VALUES (?, ?)",
+      );
+      const insertMember = db.prepare(
+        "INSERT INTO group_members (groupId, userId) VALUES (?, ?)",
+      );
+      const insertExpense = db.prepare(
+        "INSERT INTO expenses (id, groupId, paidById, expenseForId, amount, description) VALUES (?, ?, ?, ?, ?, ?)",
+      );
 
-      const insertUsers = db.transaction(() => {
+      const insertInitialData = db.transaction(() => {
+        insertGroup.run(groupId, "Trip to Paris");
+
         for (const user of users) {
           insertUser.run(user.id, user.name, user.email);
+          insertMember.run(groupId, user.id);
         }
+
+        insertExpense.run(expenseId, groupId, u1, u2, 150.0, "Welcome Dinner");
       });
 
-      insertUsers();
+      insertInitialData();
     }
 
     global.__dbInstance = db;
