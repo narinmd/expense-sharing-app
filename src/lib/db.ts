@@ -14,7 +14,6 @@ if (!fs.existsSync(databaseDirectory)) {
 const databaseFilePath = path.join(databaseDirectory, "sqlite.db");
 
 declare global {
-  // eslint-disable-next-line no-var
   var __dbInstance: Database.Database | undefined;
 }
 
