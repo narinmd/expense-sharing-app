@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
+// import { randomUUID } from "crypto";
 
 const databaseDirectory =
   process.env.NODE_ENV === "production"
