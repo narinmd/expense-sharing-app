@@ -45,15 +45,16 @@ function getDatabase(): Database.Database {
         PRIMARY KEY (groupId, userId)
       );
 
-      CREATE TABLE IF NOT EXISTS expenses (
-        id TEXT PRIMARY KEY,
-        groupId TEXT NOT NULL,
-        paidById TEXT NOT NULL,
-        amount REAL NOT NULL,
-        description TEXT NOT NULL,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+CREATE TABLE IF NOT EXISTS expenses (
+  id TEXT PRIMARY KEY,
+  groupId TEXT NOT NULL,
+  paidById TEXT NOT NULL,
+  expenseForId TEXT NOT NULL,
+  amount REAL NOT NULL,
+  description TEXT NOT NULL,
+  date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
       CREATE TABLE IF NOT EXISTS expense_splits (
         id TEXT PRIMARY KEY,
@@ -72,7 +73,6 @@ function getDatabase(): Database.Database {
       );
     `);
 
-    // ایمن‌سازی کامل برای سازگاری با دیتابیس ایجاد شده قبلی
     const alterStatements = [
       "ALTER TABLE users ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP;",
       "ALTER TABLE groups ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP;",
@@ -84,6 +84,7 @@ function getDatabase(): Database.Database {
       "ALTER TABLE settlements ADD COLUMN groupId TEXT;",
       "ALTER TABLE settlements ADD COLUMN fromUserId TEXT;",
       "ALTER TABLE settlements ADD COLUMN toUserId TEXT;",
+      "ALTER TABLE expenses ADD COLUMN expenseForId TEXT;",
     ];
 
     for (const stmt of alterStatements) {
