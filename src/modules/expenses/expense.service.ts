@@ -43,14 +43,21 @@ export function createExpense(expenseInput: CreateExpenseInput) {
     throw new Error("USER_NOT_FOUND");
   }
 
+  const defaultGroup = databaseConnection
+    .prepare("SELECT id FROM groups LIMIT 1")
+    .get() as { id: string } | undefined;
+  const groupId = defaultGroup ? defaultGroup.id : randomUUID();
+
   const generatedExpenseId = randomUUID();
+
   const insertExpenseStatement = databaseConnection.prepare(`
-    INSERT INTO expenses (id, amount, description, paidById, expenseForId)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO expenses (id, groupId, amount, description, paidById, expenseForId)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   insertExpenseStatement.run(
     generatedExpenseId,
+    groupId,
     expenseInput.amount,
     expenseInput.description,
     expenseInput.paidById,
